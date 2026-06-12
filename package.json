@@ -1,0 +1,19 @@
+{
+  "name": "branch-explorer",
+  "type": "module",
+  "private": true,
+  "description": "A Hono app on Neon Functions that visualizes and manages Neon branches (Postgres + object storage) live.",
+  "scripts": {
+    "dev": "neon dev",
+    "deploy": "neon deploy"
+  },
+  "dependencies": {
+    "@neondatabase/config": "^0.7.1",
+    "@neondatabase/serverless": "^1.0.0",
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.3"
+  }
+}

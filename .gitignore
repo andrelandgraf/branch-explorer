@@ -1,0 +1,6 @@
+node_modules
+.neon
+.env.local
+.env
+dist
+.DS_Store
