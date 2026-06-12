@@ -50,11 +50,18 @@ export async function listBranches(env: AppEnv): Promise<Branch[]> {
   return asArray(body.branches, 'branches').map(parseBranch);
 }
 
+/** Maximum number of branches we allow on the demo project. */
+export const MAX_BRANCHES = 100;
+
 export async function createBranch(
   env: AppEnv,
   parentId: string,
   name: string,
 ): Promise<Branch> {
+  const existing = await listBranches(env);
+  if (existing.length >= MAX_BRANCHES) {
+    throw new Error('Be kind! No more than 100 branches please!');
+  }
   const body = asRecord(
     await request(env, 'POST', `/projects/${env.projectId}/branches`, {
       branch: { parent_id: parentId, name },
@@ -158,6 +165,23 @@ export async function deleteBucketObject(
 ): Promise<void> {
   const path = `${bucketsPath(env, branchId)}/${encodeURIComponent(bucketName)}/objects/${encodeURIComponent(key)}`;
   await request(env, 'DELETE', path);
+}
+
+/** Download an object's raw bytes (used by the in-app preview proxy). */
+export async function getObjectBytes(
+  env: AppEnv,
+  branchId: string,
+  bucketName: string,
+  key: string,
+): Promise<ArrayBuffer> {
+  const path = `${bucketsPath(env, branchId)}/${encodeURIComponent(bucketName)}/objects/${encodeURIComponent(key)}/download`;
+  const res = await fetch(`${env.apiBase}${path}`, {
+    headers: { authorization: `Bearer ${env.apiKey}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Download failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
+  }
+  return res.arrayBuffer();
 }
 
 export async function presignUpload(

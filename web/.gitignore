@@ -1,0 +1,8 @@
+node_modules
+dist
+.vercel
+.DS_Store
+# Lockfile is generated against the Databricks npm proxy on this machine, which
+# is not portable to Vercel / public CI. Let installs resolve from the public
+# registry instead.
+package-lock.json

@@ -16,10 +16,13 @@ const NEON_API_BASE =
 
 export default defineConfig({
   preview: {
+    // Enables the Neon AI Gateway on the deployment branch and injects
+    // OPENAI_API_KEY + OPENAI_BASE_URL, which the image generator uses.
+    aiGateway: true,
     functions: {
       explorer: {
-        name: 'Branch Explorer',
-        source: 'src/index.tsx',
+        name: 'Branch Explorer API',
+        source: 'src/index.ts',
         env: {
           NEON_API_KEY,
           NEON_API_BASE,

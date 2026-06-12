@@ -8,8 +8,10 @@
     "deploy": "neon deploy"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.0",
     "@neondatabase/config": "^0.7.1",
     "@neondatabase/serverless": "^1.0.0",
+    "ai": "^5.0.0",
     "hono": "^4.6.0"
   },
   "devDependencies": {
