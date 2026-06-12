@@ -6,6 +6,7 @@ import { buildForest } from '../tree';
 import { indexRoute } from '../router';
 import { BranchTree } from './BranchTree';
 import { Panel } from './Panel';
+import { TreeSkeleton } from './Skeletons';
 
 export function App() {
   const { b } = indexRoute.useSearch();
@@ -141,7 +142,9 @@ export function App() {
             Branches{' '}
             <span className="count">{branchesQuery.data?.branches.length ?? 0}</span>
           </h2>
-          {branchesQuery.isError ? (
+          {branchesQuery.isLoading ? (
+            <TreeSkeleton />
+          ) : branchesQuery.isError ? (
             <div className="error">Failed to load branches.</div>
           ) : (
             <BranchTree
@@ -162,7 +165,7 @@ export function App() {
 
         <Panel
           data={panelQuery.data}
-          loading={panelQuery.isLoading}
+          loading={branchesQuery.isLoading || panelQuery.isLoading}
           pending={pending}
           onMutate={onMutate}
           onRowDelete={onRowDelete}

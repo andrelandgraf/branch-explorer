@@ -1,6 +1,7 @@
 import type { PanelData } from '../api';
 import { TableGrid } from './TableGrid';
 import { ObjectRow } from './ObjectRow';
+import { PanelSkeleton } from './Skeletons';
 
 interface Props {
   data: PanelData | undefined;
@@ -22,9 +23,11 @@ export function Panel({
   onObjectDelete,
 }: Props) {
   if (!data) {
-    return (
+    return loading ? (
+      <PanelSkeleton />
+    ) : (
       <section className="pane panel-pane">
-        <div className="empty">{loading ? 'Loading branch…' : 'Select a branch.'}</div>
+        <div className="empty">Select a branch.</div>
       </section>
     );
   }
