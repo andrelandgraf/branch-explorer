@@ -173,6 +173,12 @@ export function App() {
           onObjectDelete={onObjectDelete}
         />
       </div>
+
+      <footer className="footer">
+        <span className="branch-everything" data-text="Branch Everything">
+          Branch Everything
+        </span>
+      </footer>
     </>
   );
 }

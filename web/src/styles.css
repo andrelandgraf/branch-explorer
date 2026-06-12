@@ -125,6 +125,40 @@ table.grid tbody tr:hover { background: var(--panel); }
   box-shadow: 0 8px 30px rgba(0,0,0,0.4);
 }
 
+.footer {
+  display: flex; justify-content: center; align-items: center;
+  padding: 40px 24px 56px; border-top: 1px solid var(--border);
+  background: radial-gradient(600px 200px at 50% 120%, rgba(0,229,153,0.10), transparent 70%);
+}
+.branch-everything {
+  position: relative;
+  font-family: "Orbitron", ui-monospace, monospace;
+  font-weight: 800; font-size: clamp(28px, 6vw, 64px);
+  letter-spacing: 0.12em; text-transform: uppercase;
+  background: linear-gradient(90deg, var(--green), var(--blue), var(--purple), var(--green));
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: be-glow 6s linear infinite;
+  text-shadow: 0 0 24px rgba(0,229,153,0.25);
+}
+/* Cyberpunk glitch echo */
+.branch-everything::before,
+.branch-everything::after {
+  content: attr(data-text); position: absolute; inset: 0;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  opacity: 0.5; pointer-events: none;
+}
+.branch-everything::before { color: var(--blue); -webkit-text-fill-color: var(--blue); animation: be-glitch-a 3.2s infinite steps(2); }
+.branch-everything::after { color: var(--red); -webkit-text-fill-color: var(--red); animation: be-glitch-b 2.6s infinite steps(2); mix-blend-mode: screen; }
+@keyframes be-glow { to { background-position: 300% 50%; } }
+@keyframes be-glitch-a { 0%,92%,100% { transform: translate(0,0); opacity:0; } 93% { transform: translate(-2px,-1px); opacity:.55; } 96% { transform: translate(2px,1px); opacity:.4; } }
+@keyframes be-glitch-b { 0%,90%,100% { transform: translate(0,0); opacity:0; } 91% { transform: translate(2px,1px); opacity:.5; } 95% { transform: translate(-2px,-1px); opacity:.35; } }
+@media (prefers-reduced-motion: reduce) {
+  .branch-everything, .branch-everything::before, .branch-everything::after { animation: none; }
+  .branch-everything::before, .branch-everything::after { opacity: 0; }
+}
+
 .skeleton {
   background: linear-gradient(90deg, var(--panel-2) 25%, #232a30 37%, var(--panel-2) 63%);
   background-size: 400% 100%;
