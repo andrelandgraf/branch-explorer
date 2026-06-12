@@ -1,7 +1,11 @@
 import { raw } from 'hono/html';
 import type { Branch } from '../lib/neon-client.js';
 import type { TreeNode } from '../lib/tree.js';
-import type { DatabaseInspection, StorageInspection } from '../lib/inspect.js';
+import type {
+  DatabaseTables,
+  StorageInspection,
+  TableDetail,
+} from '../lib/inspect.js';
 import { styles } from './styles.js';
 
 /** Prefix a map of htmx options with `hx-` and spread it onto a JSX element. */
@@ -15,6 +19,13 @@ function hx(attrs: Record<string, string>): Record<string, string> {
 
 function shortBranchId(id: string): string {
   return id.startsWith('br-') ? id.slice(3) : id;
+}
+
+function bytes(size: number): string {
+  if (size < 1024) {
+    return `${size} B`;
+  }
+  return `${(size / 1024).toFixed(1)} KB`;
 }
 
 interface NodeViewProps {
@@ -56,6 +67,7 @@ function TreeNodeView({ node, selectedId, trunkId }: NodeViewProps) {
               vals: JSON.stringify({ parent: branch.id }),
               target: '#board',
               swap: 'outerHTML',
+              'disabled-elt': 'this',
             })}
           >
             Fork
@@ -74,6 +86,7 @@ function TreeNodeView({ node, selectedId, trunkId }: NodeViewProps) {
               target: '#board',
               swap: 'outerHTML',
               confirm: `Kill branch ${branch.name}? This deletes its database + storage.`,
+              'disabled-elt': 'this',
             })}
           >
             Kill
@@ -117,16 +130,123 @@ function TreeView({ forest, selectedId, trunkId, branchCount }: TreeViewProps) {
   );
 }
 
-function bytes(size: number): string {
-  if (size < 1024) {
-    return `${size} B`;
+/** The inner content of an expanded table (rows grid). Always shown. */
+export function TableDetailView({
+  branchId,
+  detail,
+}: {
+  branchId: string;
+  detail: TableDetail;
+}) {
+  const target = `#tbl-${detail.name}`;
+
+  if (detail.error) {
+    return (
+      <div class="grid-head">
+        <span class="error">{detail.error}</span>
+      </div>
+    );
   }
-  return `${(size / 1024).toFixed(1)} KB`;
+
+  const pk = detail.primaryKey;
+
+  return (
+    <>
+      <div class="grid-head">
+        <span class="grid-meta">
+          <b>{String(detail.rowCount)}</b> rows
+          {detail.truncated ? ` · showing ${detail.rows.length}` : ''}
+          {pk ? (
+            <span class="pill">pk: {pk}</span>
+          ) : (
+            <span class="pill">no single-col pk</span>
+          )}
+        </span>
+      </div>
+      <div class="grid-scroll">
+        <table class="grid">
+          <thead>
+            <tr>
+              {detail.columns.map((col) => (
+                <th>{col === pk ? `${col} · pk` : col}</th>
+              ))}
+              {pk ? <th class="col-actions" /> : null}
+            </tr>
+          </thead>
+          <tbody>
+            {detail.rows.length === 0 ? (
+              <tr>
+                <td class="empty">No rows.</td>
+              </tr>
+            ) : (
+              detail.rows.map((row) => (
+                <tr>
+                  {detail.columns.map((col) => (
+                    <td>{row[col] ?? ''}</td>
+                  ))}
+                  {pk ? (
+                    <td class="col-actions">
+                      <button
+                        class="btn danger sm"
+                        {...hx({
+                          post: '/row/delete',
+                        vals: JSON.stringify({
+                          branch: branchId,
+                          table: detail.name,
+                          pk,
+                          value: row[pk] ?? '',
+                        }),
+                          target,
+                          swap: 'innerHTML',
+                          'disabled-elt': 'this',
+                        })}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  ) : null}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+/** A table rendered always-expanded: header + Drop + inline rows grid. */
+function TableBlock({ branchId, detail }: { branchId: string; detail: TableDetail }) {
+  return (
+    <div class="table-block">
+      <div class="row table-header">
+        <span class="k">{detail.name}</span>
+        <span class="v">
+          <button
+            class="btn danger sm"
+            {...hx({
+              post: '/table/drop',
+              vals: JSON.stringify({ branch: branchId, table: detail.name }),
+              target: '#panel',
+              swap: 'outerHTML',
+              confirm: `Drop table ${detail.name}? This deletes the table and all its rows.`,
+              'disabled-elt': 'this',
+            })}
+          >
+            Drop table
+          </button>
+        </span>
+      </div>
+      <div class="table-detail" id={`tbl-${detail.name}`}>
+        <TableDetailView branchId={branchId} detail={detail} />
+      </div>
+    </div>
+  );
 }
 
 export interface PanelProps {
   branch: Branch;
-  database: DatabaseInspection;
+  database: DatabaseTables;
   storage: StorageInspection;
 }
 
@@ -147,6 +267,7 @@ export function Panel({ branch, database, storage }: PanelProps) {
               vals: JSON.stringify({ branch: branch.id, kind: 'widget' }),
               target: '#panel',
               swap: 'outerHTML',
+              'disabled-elt': 'this',
             })}
           >
             + Add widget row
@@ -158,6 +279,7 @@ export function Panel({ branch, database, storage }: PanelProps) {
               vals: JSON.stringify({ branch: branch.id, kind: 'object' }),
               target: '#panel',
               swap: 'outerHTML',
+              'disabled-elt': 'this',
             })}
           >
             + Add object
@@ -176,17 +298,7 @@ export function Panel({ branch, database, storage }: PanelProps) {
         ) : (
           <div class="card-list">
             {database.tables.map((table) => (
-              <div class="row">
-                <span class="k">{table.name}</span>
-                <span class="v">
-                  <span>
-                    <b>{String(table.rows)}</b> rows
-                  </span>
-                  <span>
-                    <b>{String(table.columns)}</b> cols
-                  </span>
-                </span>
-              </div>
+              <TableBlock branchId={branch.id} detail={table} />
             ))}
           </div>
         )}
@@ -216,7 +328,7 @@ export function Panel({ branch, database, storage }: PanelProps) {
                     <span class="v">
                       <span class="pill">{bytes(object.size)}</span>
                       <button
-                        class="btn danger"
+                        class="btn danger sm"
                         {...hx({
                           post: '/object/delete',
                           vals: JSON.stringify({
@@ -226,6 +338,7 @@ export function Panel({ branch, database, storage }: PanelProps) {
                           }),
                           target: '#panel',
                           swap: 'outerHTML',
+                          'disabled-elt': 'this',
                         })}
                       >
                         Delete
@@ -258,6 +371,22 @@ export function Board(props: BoardProps) {
   );
 }
 
+const spinnerScript = `
+(function () {
+  var el = document.getElementById('io-indicator');
+  if (!el) return;
+  var inflight = 0;
+  document.body.addEventListener('htmx:beforeRequest', function () {
+    inflight++;
+    el.classList.add('is-active');
+  });
+  document.body.addEventListener('htmx:afterRequest', function () {
+    inflight = Math.max(0, inflight - 1);
+    if (inflight === 0) el.classList.remove('is-active');
+  });
+})();
+`;
+
 export interface LayoutProps extends BoardProps {
   projectId: string;
   region: string;
@@ -276,6 +405,9 @@ export function Layout(props: LayoutProps) {
           <script src="https://unpkg.com/htmx.org@2.0.3" />
         </head>
         <body>
+          <div id="io-indicator" class="io-indicator">
+            <span class="io-spinner" /> Working…
+          </div>
           <header class="top">
             <div class="brand">
               <span class="dot" />
@@ -304,6 +436,7 @@ export function Layout(props: LayoutProps) {
             database={props.database}
             storage={props.storage}
           />
+          <script>{raw(spinnerScript)}</script>
         </body>
       </html>
     </>

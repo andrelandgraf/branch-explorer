@@ -7,9 +7,9 @@ import {
   type Branch,
 } from './lib/neon-client.js';
 import { buildForest } from './lib/tree.js';
-import { inspectDatabase, inspectStorage } from './lib/inspect.js';
-import { addObject, addWidget, deleteObject } from './lib/ops.js';
-import { Board, Layout, Panel } from './ui/components.js';
+import { getTableDetail, inspectDatabaseFull, inspectStorage } from './lib/inspect.js';
+import { addObject, addWidget, deleteObject, deleteRow, dropTable } from './lib/ops.js';
+import { Board, Layout, Panel, TableDetailView } from './ui/components.js';
 import { errorMessage, shortId } from './lib/util.js';
 
 const REGION = process.env.DEMO_REGION ?? 'aws-us-east-2';
@@ -32,7 +32,7 @@ async function loadBoard(env: AppEnv, wanted: string | undefined) {
   const forest = buildForest(branches);
   const selected = pickSelected(branches, wanted, env.trunkBranchId);
   const [database, storage] = await Promise.all([
-    inspectDatabase(env, selected.id),
+    inspectDatabaseFull(env, selected.id),
     inspectStorage(env, selected.id),
   ]);
   return {
@@ -52,7 +52,7 @@ async function renderPanel(env: AppEnv, branchId: string) {
     throw new Error(`Branch ${branchId} not found.`);
   }
   const [database, storage] = await Promise.all([
-    inspectDatabase(env, branchId),
+    inspectDatabaseFull(env, branchId),
     inspectStorage(env, branchId),
   ]);
   return <Panel branch={branch} database={database} storage={storage} />;
@@ -149,6 +149,40 @@ app.post('/mutate', async (c) => {
     } else if (body.kind === 'object') {
       await addObject(env, body.branch);
     }
+  } catch (err) {
+    return c.text(errorMessage(err), 500);
+  }
+  return c.html(await renderPanel(env, body.branch));
+});
+
+app.post('/row/delete', async (c) => {
+  const env = readEnv();
+  const body = await c.req.parseBody();
+  if (
+    typeof body.branch !== 'string' ||
+    typeof body.table !== 'string' ||
+    typeof body.pk !== 'string' ||
+    typeof body.value !== 'string'
+  ) {
+    return c.text('missing branch/table/pk/value', 400);
+  }
+  try {
+    await deleteRow(env, body.branch, body.table, body.pk, body.value);
+  } catch (err) {
+    return c.text(errorMessage(err), 500);
+  }
+  const detail = await getTableDetail(env, body.branch, body.table);
+  return c.html(<TableDetailView branchId={body.branch} detail={detail} />);
+});
+
+app.post('/table/drop', async (c) => {
+  const env = readEnv();
+  const body = await c.req.parseBody();
+  if (typeof body.branch !== 'string' || typeof body.table !== 'string') {
+    return c.text('missing branch/table', 400);
+  }
+  try {
+    await dropTable(env, body.branch, body.table);
   } catch (err) {
     return c.text(errorMessage(err), 500);
   }

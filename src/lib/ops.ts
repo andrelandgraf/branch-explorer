@@ -6,6 +6,8 @@ import {
   listBuckets,
   presignUpload,
 } from './neon-client.js';
+import { describeTable } from './inspect.js';
+import { quoteIdentifier } from './sql.js';
 import { pick } from './util.js';
 
 const WIDGET_NAMES = [
@@ -59,4 +61,43 @@ export async function deleteObject(
   key: string,
 ): Promise<void> {
   await deleteBucketObject(env, branchId, bucketName, key);
+}
+
+/** Delete one row from a table by its single-column primary key. */
+export async function deleteRow(
+  env: AppEnv,
+  branchId: string,
+  tableName: string,
+  pkColumn: string,
+  pkValue: string,
+): Promise<void> {
+  // Validate the table + primary key against the live schema so neither the
+  // table name nor the key column can be spoofed by the request.
+  const { primaryKey } = await describeTable(env, branchId, tableName);
+  if (primaryKey === null) {
+    throw new Error(`Table "${tableName}" has no single-column primary key.`);
+  }
+  if (primaryKey !== pkColumn) {
+    throw new Error('Primary key column mismatch.');
+  }
+  const uri = await getConnectionUri(env, branchId);
+  const sql = neon(uri);
+  await sql.query(
+    `delete from ${quoteIdentifier(tableName)} where ${quoteIdentifier(pkColumn)}::text = $1`,
+    [pkValue],
+  );
+}
+
+/** Drop an entire table from a branch. */
+export async function dropTable(
+  env: AppEnv,
+  branchId: string,
+  tableName: string,
+): Promise<void> {
+  // describeTable throws if the table isn't in the public schema, so a drop can
+  // only target a real, validated table identifier.
+  await describeTable(env, branchId, tableName);
+  const uri = await getConnectionUri(env, branchId);
+  const sql = neon(uri);
+  await sql.query(`drop table ${quoteIdentifier(tableName)}`);
 }

@@ -69,7 +69,15 @@ export async function deleteBranch(env: AppEnv, branchId: string): Promise<void>
   await request(env, 'DELETE', `/projects/${env.projectId}/branches/${branchId}`);
 }
 
+// Connection URIs don't change for the life of a branch's role, so cache them
+// for the function instance to avoid an API round-trip on every DB read.
+const connectionUriCache = new Map<string, string>();
+
 export async function getConnectionUri(env: AppEnv, branchId: string): Promise<string> {
+  const cached = connectionUriCache.get(branchId);
+  if (cached) {
+    return cached;
+  }
   const query = new URLSearchParams({
     branch_id: branchId,
     database_name: env.databaseName,
@@ -79,7 +87,9 @@ export async function getConnectionUri(env: AppEnv, branchId: string): Promise<s
     await request(env, 'GET', `/projects/${env.projectId}/connection_uri?${query}`),
     'connection_uri response',
   );
-  return asString(body.uri, 'connection_uri.uri');
+  const uri = asString(body.uri, 'connection_uri.uri');
+  connectionUriCache.set(branchId, uri);
+  return uri;
 }
 
 // --- Object storage (Preview) ---
