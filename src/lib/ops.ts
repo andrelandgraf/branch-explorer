@@ -1,7 +1,9 @@
+import { createOpenAI } from '@ai-sdk/openai';
 import { neon } from '@neondatabase/serverless';
 import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
 import type { AppEnv } from './env.js';
+import { describeTable } from './inspect.js';
+import { asArray, asNumber, asRecord, isRecord } from './json.js';
 import {
   deleteBucketObject,
   getConnectionUri,
@@ -9,12 +11,15 @@ import {
   listBuckets,
   presignUpload,
 } from './neon-client.js';
-import { describeTable } from './inspect.js';
 import { quoteIdentifier } from './sql.js';
-import { asArray, asNumber, asRecord, isRecord } from './json.js';
 import { pick, shortId } from './util.js';
 
-const IMAGE_MODEL = 'databricks-gpt-5-mini';
+const openai = createOpenAI({
+  apiKey: process.env.NEON_AI_GATEWAY_TOKEN,
+  baseURL: `${process.env.NEON_AI_GATEWAY_BASE_URL}/openai/v1`,
+});
+
+const IMAGE_MODEL = 'gpt-5-mini';
 
 /** Be kind to the shared demo project — keep it small. */
 export const MAX_OBJECTS_PER_BUCKET = 100;

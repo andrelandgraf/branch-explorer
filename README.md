@@ -53,14 +53,14 @@ branch-explorer/
 
 ## Run the API (Neon staging)
 
-Preview features run on staging, accessed via `neonctl-staging` (which exports
-`NEON_API_KEY` + `NEON_API_HOST`).
+This demo talks to the **staging** console (`console-stage.neon.build`), not
+production. Point the CLI at staging with `NEON_API_HOST` and a staging API key.
 
 ```bash
 npm install
-neonctl-staging link --agent
-neonctl-staging dev          # serves the JSON API locally
-neonctl-staging deploy       # deploy the function
+NEON_API_HOST=https://console-stage.neon.build/api/v2 neon link --agent
+NEON_API_HOST=https://console-stage.neon.build/api/v2 neon dev
+NEON_API_HOST=https://console-stage.neon.build/api/v2 neon deploy
 ```
 
 Set `TARGET_PROJECT_ID` / `TRUNK_BRANCH_ID` to point at your seeded demo project.
